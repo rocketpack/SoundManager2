@@ -551,6 +551,7 @@ package {
         oSound.didFinish = false; // reset this flag
         oSound.soundChannel.addEventListener(Event.SOUND_COMPLETE, function() : void {
           if (oSound) {
+            if (oSound.lastValues.loops == 1 || !oSound.lastValues.resumedFromPauseLooped) { // RP
             // force progress check, catching special end-of-sound case where position may not match duration.
             checkSoundProgress(oSound, true, true);
             try {
@@ -566,6 +567,12 @@ package {
             }
             oSound.ignoreDataError = false; // ..and reset
             oSound.handledDataError = false; // reset this flag
+            // RP start
+            }
+            else {
+              oSound.start(0, oSound.lastValues.loops, oSound.lastValues.allowMultiShot);
+            }
+            // RP end
           } else {
             // safety net
             ExternalInterface.call(baseJSObject + "['" + sID + "']._onfinish");
@@ -756,7 +763,9 @@ package {
         loops: loops||1,
         leftPeak: 0,
         rightPeak: 0,
-        bufferLength: 0
+        bufferLength: 0,
+        resumedFromPauseLooped: false, // RP
+        allowMultiShot: false // RP
       };
     }
 
@@ -829,6 +838,7 @@ package {
       writeDebug('start (' + sID + '): ' + nMsecOffset + (nLoops > 1 ? ', loops: ' + nLoops : ''));
       s.lastValues.paused = false; // reset pause if applicable
       s.lastValues.loops = (nLoops || 1);
+      s.lastValues.resumedFromPauseLooped = false; // RP
       if (!s.useNetstream) {
         s.lastValues.position = nMsecOffset;
       }
@@ -875,7 +885,14 @@ package {
         if (s.useNetstream) {
           s.ns.resume();
         } else {
-          s.start(s.lastValues.position, s.lastValues.loops, allowMultiShot);
+          // RP
+          //s.start(s.lastValues.position, s.lastValues.loops, allowMultiShot);
+          if (s.lastValues.loops > 1) {
+            s.lastValues.allowMultiShot = allowMultiShot;
+            s.lastValues.resumedFromPauseLooped = true;
+          }
+          s.start(s.lastValues.position, /*s.lastValues.loops*/1, allowMultiShot);
+          // RP end
         }
         try {
           registerOnComplete(sID);

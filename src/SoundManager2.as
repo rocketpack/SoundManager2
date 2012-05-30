@@ -219,8 +219,17 @@ class SoundManager2 {
 
     var registerOnComplete = function(sID) {
       soundObjects[sID].onSoundComplete = function() {
-        checkProgress();
-        ExternalInterface.call(baseJSObject + "['" + sID + "']._onfinish");
+        // RP
+        //checkProgress();
+        //ExternalInterface.call(baseJSObject + "['" + sID + "']._onfinish");
+        if (this.lastValues.nLoops == 1 || !this.lastValues.resumedFromPauseLooped) {
+          checkProgress();
+          ExternalInterface.call(baseJSObject + "['" + sID + "']._onfinish");
+        }
+        else {
+          this.start(0, this.lastValues.nLoops);
+        }
+        // RP end
       }
     }
 
@@ -294,7 +303,8 @@ class SoundManager2 {
       s.lastValues = {
         bytes: 0,
         position: 0,
-        nLoops: loops||1
+        nLoops: loops||1,
+        resumedFromPauseLooped: false // RP
       };
     }
 
@@ -331,6 +341,7 @@ class SoundManager2 {
       var s = soundObjects[sID];
       s.lastValues.paused = false; // reset pause if applicable
       s.lastValues.nLoops = (nLoops || 1);
+      s.lastValues.resumedFromPauseLooped = false; // RP
       s.start(nMsecOffset, nLoops);
       return true;
     }
@@ -349,7 +360,12 @@ class SoundManager2 {
         // resume playing from last position
         // writeDebug('resuming - playing at '+s.lastValues.position+', '+s.lastValues.nLoops+' times');
         s.paused = false;
-        s.start(s.lastValues.position / 1000, s.lastValues.nLoops);
+        // RP
+        //s.start(s.lastValues.position / 1000, s.lastValues.nLoops);
+        if (s.lastValues.nLoops > 1)
+          s.lastValues.resumedFromPauseLooped = true;
+        s.start(s.lastValues.position / 1000);
+        // RP end
       }
     }
 
